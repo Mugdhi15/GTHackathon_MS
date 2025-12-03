@@ -1,12 +1,35 @@
-console.log("ChatJS Loaded v4");
+console.log("ChatJS Loaded v6 — Guaranteed GPS Fix");
 
 const messages = document.getElementById("messages");
 const input = document.getElementById("userText");
 const sendBtn = document.getElementById("sendBtn");
 
-/* -------------------------------
-   Helper: Add a chat bubble
---------------------------------*/
+/* -------------------------------------------------------------------
+   ALWAYS FETCH LOCATION *BEFORE* sending → avoids null lat/lon problem
+--------------------------------------------------------------------*/
+function getLiveLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      console.warn("No geolocation API — using fallback Pune coords");
+      return resolve({ lat: 18.5204, lon: 73.8567 });
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude
+        });
+      },
+      (err) => {
+        console.warn("GPS blocked — fallback used", err);
+        resolve({ lat: 18.5204, lon: 73.8567 }); 
+      }
+    );
+  });
+}
+
+/* ------------------------------- */
 function addMessage(text, cls = "user") {
   const d = document.createElement("div");
   d.className = cls;
@@ -15,16 +38,14 @@ function addMessage(text, cls = "user") {
   messages.scrollTop = messages.scrollHeight;
 }
 
-/* -------------------------------
-   Helper: Render Context Card
---------------------------------*/
+/* ------------------------------- */
 function renderContextCard(ctx) {
   const card = document.createElement("div");
   card.className = "context-card";
 
-  let weatherText = `${ctx.weather.condition || "Unknown"} (${ctx.weather.temperature || "?"}°)`;
-  let locationText = `${ctx.store.name || "Unknown"} (${ctx.store.distance || "?"})`;
-  let offerText = ctx.offers.length ? ctx.offers[0].offer : "No active offers";
+  const weatherText = `${ctx.weather.condition || "Unknown"} (${ctx.weather.temperature || "?"})`;
+  const locationText = `${ctx.store.name || "Unknown"} (${ctx.store.distance || "?"})`;
+  const offerText = ctx.offers?.length ? ctx.offers[0].offer : "No active offers";
 
   card.innerHTML = `
     <h3>Context Card</h3>
@@ -58,9 +79,7 @@ function renderContextCard(ctx) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-/* -------------------------------
-   Main Send Handler
---------------------------------*/
+/* ------------------------------------------------------------------- */
 sendBtn.onclick = async () => {
   const text = input.value.trim();
   if (!text) return;
@@ -70,11 +89,15 @@ sendBtn.onclick = async () => {
 
   addMessage("Thinking...", "bot-thinking");
 
+  // ⭐ WAIT for GPS here — fixes your location not updating
+  const gps = await getLiveLocation();
+  console.log("Fetched GPS:", gps);
+
   const payload = {
     customer_id: "cust_1",
-    text: text,
-    lat: 18.5204,
-    lon: 73.8567
+    text,
+    lat: gps.lat,
+    lon: gps.lon
   };
 
   let res;
@@ -90,29 +113,24 @@ sendBtn.onclick = async () => {
     return;
   }
 
-  // remove thinking bubble
+  // remove "Thinking..."
   const thinking = document.querySelector(".bot-thinking");
   if (thinking) thinking.remove();
 
-  // parse JSON
   let data;
   try {
     data = await res.json();
   } catch (err) {
-    addMessage("Bot: (Invalid JSON response)", "bot");
+    addMessage("Bot: (Invalid JSON from backend)", "bot");
     console.error("JSON parse error:", err);
     return;
   }
 
-  // extract bot reply
-  const assistantText = (data && data.reply)
-    ? data.reply
-    : "No response from AI";
+  // final bot reply
+  addMessage("Bot: " + (data.reply || "No response"), "bot");
 
-  addMessage("Bot: " + assistantText, "bot");
-
-  // render context card
-  if (data && data.context_card) {
+  // show context card
+  if (data.context_card) {
     renderContextCard(data.context_card);
   }
 };

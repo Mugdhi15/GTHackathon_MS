@@ -4,16 +4,15 @@ from dotenv import load_dotenv
 
 from fastapi_service.masking import mask_pii
 from fastapi_service.rag_client import query_rag
-from fastapi_service.utils import get_weather, get_nearby_store
+from fastapi_service.utils import get_weather, get_nearby_store, get_nearby_places_osm
 
 from openai import OpenAI
 
 load_dotenv()
 
-# Initialize new OpenAI client (v1.x)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Load data files
+# Load data
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CUSTOMERS = json.load(open(os.path.join(BASE, "data/customers.json")))
 OFFERS = json.load(open(os.path.join(BASE, "data/offers.json")))
@@ -23,10 +22,8 @@ SESSION = {}
 
 def simple_emotion_detect(text):
     t = text.lower()
-    if any(w in t for w in ["cold", "freezing"]):
-        return "cold"
-    if any(w in t for w in ["angry", "frustrated"]):
-        return "frustrated"
+    if any(w in t for w in ["cold", "freezing"]): return "cold"
+    if any(w in t for w in ["angry", "frustrated"]): return "frustrated"
     return "neutral"
 
 
@@ -34,8 +31,21 @@ async def build_context_and_response(customer_id, text, lat, lon):
 
     masked_text = mask_pii(text)
     weather = get_weather(lat, lon)
-    store = get_nearby_store(lat, lon)
+
+    # ⭐ FIRST TRY REAL OPENSTREETMAP SHOPS
+    places = get_nearby_places_osm(lat, lon, query="cafe")
+
+    if places:
+        store = {
+            "name": places[0]["name"],
+            "distance": "Nearby"
+        }
+    else:
+        store = get_nearby_store(lat, lon)  # fallback
+
+    # Static inventory (for now)
     inventory = INVENTORY.get("Starbucks_MG_Road", {})
+
     rag_results = query_rag(text)
     emotion = simple_emotion_detect(text)
     offers = [o for o in OFFERS if "Hot" in o["offer"]]
@@ -58,7 +68,8 @@ async def build_context_and_response(customer_id, text, lat, lon):
 
     prompt = f"""
 You are ContextOS, a grounded AI assistant.
-ONLY use the structured data below. If any info is missing, say "Unknown".
+ONLY use the structured data below.
+If any info is missing, say "Unknown".
 
 Context:
 {json.dumps(context_card, indent=2)}
@@ -70,7 +81,6 @@ Respond with:
 2. action (navigate | redeem_offer | give_info)
 """
 
-    # NEW OpenAI v1.x Chat API
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
@@ -78,33 +88,16 @@ Respond with:
         max_tokens=150
     )
 
-    try:
-        reply = completion.choices[0].message["content"]
-    except:
-        reply = completion.choices[0].message.content if hasattr(completion.choices[0].message, "content") else None
+    reply_raw = completion.choices[0].message.content.strip()
+    print("LLM RAW REPLY:", reply_raw)
 
-    print("LLM RAW REPLY:", reply)  # Debug
+    # Clean format
+    lines = reply_raw.split("\n")
+    clean_reply = lines[0].replace("1.", "").strip()
+    action = (lines[1].replace("2.", "").strip() if len(lines) > 1 else "unknown")
 
-    raw = (reply or "").strip()
-
-    # Extract first line (main reply)
-    first_line = raw.split("\n")[0]
-    clean_reply = first_line.replace("1.", "").strip()
-
-    # Extract action (2nd line)
-    action = "unknown"
-    if "\n" in raw:
-        second_line = raw.split("\n")[1]
-        action = second_line.replace("2.", "").strip()
-
-    # ----------------------------
-    # FINAL RETURN
-    # ----------------------------
     return {
         "reply": clean_reply,
         "action": action,
         "context_card": context_card
     }
-
-
-

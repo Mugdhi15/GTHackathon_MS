@@ -1,6 +1,6 @@
-🚀 H-002 | Customer Experience Automation
+🚀 *H-002 | Customer Experience Automation*
 
-*Track: Customer Experience & Conversational AI*
+Track: Customer Experience & Conversational AI
 =============================================
 
 > **ContextOS** — The Hyper-Personalized Customer Experience Engine
@@ -12,9 +12,7 @@
 **Context:** Retail customers today expect instant, context-aware answers:
 
 - “Is this store open?”
-
 - “Do you have Hot Cocoa?”
-
 - “I’m cold, where can I go?”
 
 But standard chatbots fail — they respond generically, don’t understand user context, and can’t use store data, customer history, or location.
@@ -210,13 +208,7 @@ Major hurdles I overcame are:
 6\. Visual Proof
 ----------------
 
-**Anomaly Detected (Terminal)**
-
-**Final Report (PDF)**
-
-_Terminal showing Isolation Forest detecting outliers_
-
-_Final Output sent to client via Email_
+![alt text](sample_output.png)
 
 7\. How to Run
 --------------

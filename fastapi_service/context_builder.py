@@ -1,80 +1,110 @@
-# context_builder.py
-import json, os, asyncio
-from .masking import mask_pii
-from .rag_client import query_rag
-import openai
+import os
+import json
 from dotenv import load_dotenv
-load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# load local JSONs
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-with open(os.path.join(BASE_DIR,"data/customers.json")) as f:
-    CUSTOMERS = json.load(f)
-with open(os.path.join(BASE_DIR,"data/offers.json")) as f:
-    OFFERS = json.load(f)
-with open(os.path.join(BASE_DIR,"data/inventory.json")) as f:
-    INVENTORY = json.load(f)
+from fastapi_service.masking import mask_pii
+from fastapi_service.rag_client import query_rag
+from fastapi_service.utils import get_weather, get_nearby_store
+
+from openai import OpenAI
+
+load_dotenv()
+
+# Initialize new OpenAI client (v1.x)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Load data files
+BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+CUSTOMERS = json.load(open(os.path.join(BASE, "data/customers.json")))
+OFFERS = json.load(open(os.path.join(BASE, "data/offers.json")))
+INVENTORY = json.load(open(os.path.join(BASE, "data/inventory.json")))
+
+SESSION = {}
 
 def simple_emotion_detect(text):
-    txt = text.lower()
-    if any(w in txt for w in ["cold","freezing","chilly","freeze"]):
+    t = text.lower()
+    if any(w in t for w in ["cold", "freezing"]):
         return "cold"
-    if any(w in txt for w in ["angry","frustrated","upset","mad","not happy"]):
+    if any(w in t for w in ["angry", "frustrated"]):
         return "frustrated"
-    if any(w in txt for w in ["lost","where","directions","how to get"]):
-        return "lost"
     return "neutral"
 
-async def build_context_and_response(customer_id, text, lat=None, lon=None):
-    # 1. Mask text
-    masked = mask_pii(text)
 
-    # 2. Build base context
-    customer = CUSTOMERS.get(customer_id, {})
+async def build_context_and_response(customer_id, text, lat, lon):
+
+    masked_text = mask_pii(text)
+    weather = get_weather(lat, lon)
+    store = get_nearby_store(lat, lon)
+    inventory = INVENTORY.get("Starbucks_MG_Road", {})
+    rag_results = query_rag(text)
     emotion = simple_emotion_detect(text)
+    offers = [o for o in OFFERS if "Hot" in o["offer"]]
 
-    # 3. RAG lookup
-    rag_results = query_rag(text, top_k=3)
+    if customer_id not in SESSION:
+        SESSION[customer_id] = {"history": []}
 
-    # 4. Inventory/Offer matching (very simple)
-    # Suppose lat/lon maps to a store — for demo, pick Starbucks_MG_Road
-    nearby_store = "Starbucks_MG_Road"
-    inv = INVENTORY.get(nearby_store, {})
-    offer_matches = [o for o in OFFERS if "Hot Cocoa" in o.get("offer","") or "Hot Cocoa" in " ".join(o.get("tags",[]))]
+    SESSION[customer_id]["history"].append(masked_text)
 
     context_card = {
-        "masked_user_text": masked,
         "emotion": emotion,
-        "nearby_store": nearby_store,
-        "inventory_match": inv,
-        "offers": offer_matches,
+        "weather": weather,
+        "store": store,
+        "inventory": inventory,
+        "offers": offers,
         "rag_snippets": rag_results,
-        "customer": {"id":customer_id, **customer}
+        "history": SESSION[customer_id]["history"][-5:],
+        "customer": CUSTOMERS.get(customer_id, {})
     }
 
-    # 5. Compose final prompt for OpenAI (masking ensured)
     prompt = f"""
-You are a helpful customer assistant. Use the context below to generate a short, actionable reply (<= 80 words).
-Do NOT output any raw PII (masking already applied).
+You are ContextOS, a grounded AI assistant.
+ONLY use the structured data below. If any info is missing, say "Unknown".
 
-CONTEXT:
-User text: {masked}
-Emotion: {emotion}
-Customer history: {customer.get('past_purchases',[])}
-Nearby store inventory: {inv}
-Offers: {offer_matches}
-RAG extracts: {[(r['text'][:200], r['meta']) for r in rag_results]}
+Context:
+{json.dumps(context_card, indent=2)}
 
-Provide:
-1) "reply": a short message to the user
-2) "action": (one of "navigate","redeem_offer","give_info","ask_followup")
-3) "explain": 1-line explanation of why the suggestion was chosen
+User said: "{masked_text}"
+
+Respond with:
+1. reply (1–2 sentences only)
+2. action (navigate | redeem_offer | give_info)
 """
-    # call OpenAI (or LM Studio if you have local model)
-    resp = openai.ChatCompletion.create(model="gpt-4o-mini", # you can replace with gpt-4o or gpt-4 if available
-                                        messages=[{"role":"user","content":prompt}],
-                                        max_tokens=200, temperature=0.2)
-    gtext = resp['choices'][0]['message']['content'].strip()
-    # For reliability, return both generated text and context card
-    return {"context_card":context_card, "assistant_raw": gtext}
+
+    # NEW OpenAI v1.x Chat API
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=150
+    )
+
+    try:
+        reply = completion.choices[0].message["content"]
+    except:
+        reply = completion.choices[0].message.content if hasattr(completion.choices[0].message, "content") else None
+
+    print("LLM RAW REPLY:", reply)  # Debug
+
+    raw = (reply or "").strip()
+
+    # Extract first line (main reply)
+    first_line = raw.split("\n")[0]
+    clean_reply = first_line.replace("1.", "").strip()
+
+    # Extract action (2nd line)
+    action = "unknown"
+    if "\n" in raw:
+        second_line = raw.split("\n")[1]
+        action = second_line.replace("2.", "").strip()
+
+    # ----------------------------
+    # FINAL RETURN
+    # ----------------------------
+    return {
+        "reply": clean_reply,
+        "action": action,
+        "context_card": context_card
+    }
+
+
+

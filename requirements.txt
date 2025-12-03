@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 langchain
-chromadb
 sentence-transformers
 openai
 requests
@@ -13,3 +12,4 @@ tqdm
 PyPDF2
 transformers
 sentencepiece
+chromadb==0.5.3

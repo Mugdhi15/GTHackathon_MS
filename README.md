@@ -1,5 +1,6 @@
 🚀 H-002 | Customer Experience Automation
-Track: Customer Experience & Conversational AI
+
+*Track: Customer Experience & Conversational AI*
 =============================================
 
 > **ContextOS** — The Hyper-Personalized Customer Experience Engine
@@ -48,9 +49,9 @@ The system intelligently merges:
 
 ContextOS is built as a production-minded architecture, with clear separation between Frontend (Django), Backend (FastAPI), RAG (ChromaDB), and **LLM intelligence (OpenAI)**.
 
-**System Architecture:**
-
 ## **System Architecture**
+
+![alt text](system_achitecture.png)
 
 1. **Frontend (Django Web UI):**  
    A clean HTML/CSS/JS chat interface hosted on Django. It captures user messages and sends them to the backend API in real-time.
@@ -92,7 +93,7 @@ ContextOS is built as a production-minded architecture, with clear separation be
    - **OpenWeather API:** Helps the bot give temperature-aware suggestions (e.g., “It’s 17°C near you”).  
 
 7. **Generative AI (The Assistant):**
-   - Uses **OpenAI GPT-4o-mini** or **Local LM Studio** model via API.  
+   - Uses **OpenAI GPT-4o-mini**.  
    - Response generation follows a **Strict-Context Prompt** containing only:  
      - Masked user text  
      - Context card  
@@ -126,7 +127,7 @@ ContextOS is built as a production-minded architecture, with clear separation be
 | **Frontend** | Django, HTML, CSS, JS |
 | **Backend** | FastAPI (Python 3.11) |
 | **RAG** | ChromaDB + SentenceTransformers |
-| **LLM** | OpenAI GPT-4o-mini / Local LM Studio |
+| **LLM** | OpenAI GPT-4o-mini |
 | **Data APIs** | Google Places, OpenWeather |
 | **Security** | Regex PII Masking |
 | **Storage** | JSON + Vector DB |
@@ -135,7 +136,7 @@ ContextOS is built as a production-minded architecture, with clear separation be
 
 5\. Challenges & Learnings
 --------------------------
-_ Major hurdles I overcame are:_
+Major hurdles I overcame are:
 
 ---
 

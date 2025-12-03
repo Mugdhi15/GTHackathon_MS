@@ -1,0 +1,21 @@
+# Hide environment files
+.env
+*.env
+
+# Python
+venv/
+__pycache__/
+
+# Chroma vector database
+chroma_db/
+
+# Django
+*.sqlite3
+*.pyc
+
+# Logs
+*.log
+
+# OS cruft
+.DS_Store
+Thumbs.db

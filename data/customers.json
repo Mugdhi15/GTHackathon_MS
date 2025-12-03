@@ -1,0 +1,12 @@
+{
+  "cust_1": {
+    "name": "Rohit Sharma",
+    "phone": "+919876543210",
+    "loyalty_tier": "Gold",
+    "past_purchases": [
+      {"item":"Caffe Mocha","date":"2025-10-01"},
+      {"item":"Hot Chocolate","date":"2025-10-12"}
+    ],
+    "preferences": ["hot drinks","chocolate"]
+  }
+}

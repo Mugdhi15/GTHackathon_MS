@@ -1,0 +1,103 @@
+/* --- Basic Reset --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+/* --- Chat Window --- */
+.chat-window {
+    width: 500px;
+    height: 80vh;
+    margin: 40px auto;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    background: #fafafa;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* --- Messages Container --- */
+#messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+/* --- User Message --- */
+.user {
+    background: #d0ebff;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    width: fit-content;
+    max-width: 80%;
+    align-self: flex-end;
+}
+
+/* --- Bot Message --- */
+.bot {
+    background: #e8e8e8;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    width: fit-content;
+    max-width: 80%;
+    align-self: flex-start;
+}
+
+/* --- Thinking Placeholder --- */
+.bot-thinking {
+    font-style: italic;
+    color: #777;
+    margin-bottom: 12px;
+    width: fit-content;
+    align-self: flex-start;
+}
+
+/* --- Context Card Display --- */
+.context {
+    background: #fff6d3;
+    padding: 8px;
+    border-left: 4px solid #ffcc00;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    white-space: pre-wrap;
+    max-width: 90%;
+}
+
+/* --- Input Row --- */
+.input-row {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background: white;
+}
+
+.input-row input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.input-row button {
+    margin-left: 10px;
+    padding: 10px 15px;
+    background: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.input-row button:hover {
+    background: #357ac9;
+}

@@ -1,0 +1,4 @@
+[
+  {"store":"Starbucks","offer":"10% off on Hot Cocoa","valid_until":"2026-01-01","tags":["hot cocoa","beverage"]},
+  {"store":"CafeGroundTruth","offer":"Buy 1 get 1 coffee","valid_until":"2026-02-01","tags":["coffee"]}
+]

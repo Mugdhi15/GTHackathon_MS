@@ -1,6 +1,4 @@
-🚀 *H-002 | Customer Experience Automation*
-
-Track: Customer Experience & Conversational AI
+🚀 H-002 | Customer Experience Automation
 =============================================
 
 > **ContextOS** — The Hyper-Personalized Customer Experience Engine
